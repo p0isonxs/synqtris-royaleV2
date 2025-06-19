@@ -94,6 +94,9 @@ const [leaderboard, setLeaderboard] = useState([]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].includes(e.key)) {
+        e.preventDefault();
+      }
       if (gameOver || !hasStarted) return;
       if (e.key === "ArrowLeft") {
         move(-1);
