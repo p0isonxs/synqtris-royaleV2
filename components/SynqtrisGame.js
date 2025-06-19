@@ -50,13 +50,27 @@ function SynqtrisGame() {
   const [gameOver, setGameOver] = useState(false);
   const [username, setUsername] = useState("");
   const [hasStarted, setHasStarted] = useState(false);
-  const [leaderboard, setLeaderboard] = useState(() => {
-    if (typeof window === "undefined") return [];
-    const saved = localStorage.getItem("synqtris_leaderboard");
-    return saved ? JSON.parse(saved) : [];
-  });
+  const SUPABASE_URL = "https://drvegjjbjxryogrxrhpz.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRydmVnampianhyeW9ncnhyaHB6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzMzEyNzIsImV4cCI6MjA2NTkwNzI3Mn0._UMUfA4sxx96oA7d4h9YwgUo1ZpZZOnLgQxgOgrxO68";
+
+const [leaderboard, setLeaderboard] = useState([]);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(true);
 
   useEffect(() => {
+    // Fetch leaderboard from Supabase
+    fetch(`${SUPABASE_URL}/rest/v1/scores?select=*&order=score.desc&limit=5`, {
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`
+      }
+    })
+      .then(res => res.json())
+      .then(data => {
+        const sorted = data.sort((a, b) => b.score - a.score).slice(0, 5);
+        setLeaderboard(sorted);
+        setLoadingLeaderboard(false);
+      });
+
     if (gameOver || !hasStarted) return;
     const id = setInterval(() => {
       setTick(t => t + 1);
@@ -124,10 +138,30 @@ function SynqtrisGame() {
       const next = getRandomTetromino();
       if (!canMove(next.shape, 3, 0)) {
         setGameOver(true);
-        const newLeaderboard = [...leaderboard, { name: username, score: score + linesCleared * 100 }]
-          .sort((a, b) => b.score - a.score).slice(0, 5);
-        setLeaderboard(newLeaderboard);
-        localStorage.setItem("synqtris_leaderboard", JSON.stringify(newLeaderboard));
+        fetch(`${SUPABASE_URL}/rest/v1/scores?name=eq.${username}`, {
+          headers: {
+            apikey: SUPABASE_KEY,
+            Authorization: `Bearer ${SUPABASE_KEY}`
+          }
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.length === 0 || score + linesCleared * 100 > data[0].score) {
+              fetch(`${SUPABASE_URL}/rest/v1/scores`, {
+                method: "POST",
+                headers: {
+                  apikey: SUPABASE_KEY,
+                  Authorization: `Bearer ${SUPABASE_KEY}`,
+                  "Content-Type": "application/json",
+                  Prefer: "resolution=merge-duplicates"
+                },
+                body: JSON.stringify({
+                  name: username,
+                  score: score + linesCleared * 100
+                })
+              });
+            }
+          });
         setTimeout(() => {
           alert("Game Over. Final Score for " + username + ": " + (score + linesCleared * 100));
         }, 100);
@@ -273,15 +307,21 @@ ctx.shadowOffsetY = 2;
       <div className="mt-6 w-full max-w-xs">
         <h2 className="text-lg font-semibold mb-2">🏆 Leaderboard</h2>
         <ul className="bg-black border border-cyan-700 rounded shadow text-cyan-300">
-          {leaderboard.map((entry, index) => (
-            <li
-              key={index}
-              className="flex justify-between px-4 py-2 border-b last:border-b-0"
-            >
-              <span>{entry.name}</span>
-              <span>{entry.score}</span>
-            </li>
-          ))}
+          {loadingLeaderboard ? (
+            <li className="px-4 py-2 text-center text-cyan-400">Loading...</li>
+          ) : leaderboard.length === 0 ? (
+            <li className="px-4 py-2 text-center">No scores yet</li>
+          ) : (
+            leaderboard.map((entry, index) => (
+              <li
+                key={index}
+                className="flex flex-col sm:flex-row sm:justify-between px-4 py-2 border-b last:border-b-0"
+              >
+                <span>{entry.name} - {entry.score}</span>
+                <span className="text-xs text-gray-400">{new Date(entry.created_at).toLocaleString()}</span>
+              </li>
+            ))
+          )}
         </ul>
       </div>
     </div>
