@@ -51,14 +51,14 @@ function SynqtrisGame() {
   const [username, setUsername] = useState("");
   const [hasStarted, setHasStarted] = useState(false);
   const SUPABASE_URL = "https://drvegjjbjxryogrxrhpz.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRydmVnampianhyeW9ncnhyaHB6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzMzEyNzIsImV4cCI6MjA2NTkwNzI3Mn0._UMUfA4sxx96oA7d4h9YwgUo1ZpZZOnLgQxgOgrxO68";
+  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRydmVnampianhyeW9ncnhyaHB6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzMzEyNzIsImV4cCI6MjA2NTkwNzI3Mn0._UMUfA4sxx96oA7d4h9YwgUo1ZpZZOnLgQxgOgrxO68";
 
-const [leaderboard, setLeaderboard] = useState([]);
+  const [leaderboard, setLeaderboard] = useState([]);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(true);
 
   useEffect(() => {
     const fetchLeaderboard = () => {
-      fetch(`${SUPABASE_URL}/rest/v1/scores?select=*&order=score.desc&limit=5`, {
+      fetch(`${SUPABASE_URL}/rest/v1/scores?select=*`, {
         headers: {
           apikey: SUPABASE_KEY,
           Authorization: `Bearer ${SUPABASE_KEY}`
@@ -66,14 +66,22 @@ const [leaderboard, setLeaderboard] = useState([]);
       })
         .then(res => res.json())
         .then(data => {
-          const sorted = data.sort((a, b) => b.score - a.score).slice(0, 5);
+          // Filter to keep only highest score per user
+          const topScoresMap = {};
+          for (const entry of data) {
+            if (!topScoresMap[entry.name] || entry.score > topScoresMap[entry.name].score) {
+              topScoresMap[entry.name] = entry;
+            }
+          }
+          const uniqueTopScores = Object.values(topScoresMap);
+          const sorted = uniqueTopScores.sort((a, b) => b.score - a.score).slice(0, 5);
           setLeaderboard(sorted);
           setLoadingLeaderboard(false);
         });
     };
 
     fetchLeaderboard();
-    const interval = setInterval(fetchLeaderboard, 10000); // update every 10 seconds
+    const interval = setInterval(fetchLeaderboard, 10000);
 
     if (gameOver || !hasStarted) return;
     const id = setInterval(() => {
@@ -85,8 +93,6 @@ const [leaderboard, setLeaderboard] = useState([]);
       clearInterval(interval);
     };
   }, [gameOver, hasStarted]);
-
-    
 
   useEffect(() => {
     if (!gameOver && hasStarted) moveDown();
