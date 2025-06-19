@@ -95,18 +95,12 @@ const [leaderboard, setLeaderboard] = useState([]);
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (gameOver || !hasStarted) return;
-      if (e.key === "ArrowLeft") {
-        move(-1);
-      } else if (e.key === "ArrowRight") {
-        move(1);
-      } else if (e.key === "ArrowDown") {
-        moveDown();
-      } else if (e.key === "ArrowUp") {
-        const rotated = rotate(current.shape);
-        if (canMove(rotated, position.x, position.y)) {
-          setCurrent(cur => ({ ...cur, shape: rotated }));
-        }
+
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].includes(e.key)) {
+        e.preventDefault();
       }
+
+$1
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
