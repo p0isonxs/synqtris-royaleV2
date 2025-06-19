@@ -57,26 +57,36 @@ const [leaderboard, setLeaderboard] = useState([]);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(true);
 
   useEffect(() => {
-    // Fetch leaderboard from Supabase
-    fetch(`${SUPABASE_URL}/rest/v1/scores?select=*&order=score.desc&limit=5`, {
-      headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${SUPABASE_KEY}`
-      }
-    })
-      .then(res => res.json())
-      .then(data => {
-        const sorted = data.sort((a, b) => b.score - a.score).slice(0, 5);
-        setLeaderboard(sorted);
-        setLoadingLeaderboard(false);
-      });
+    const fetchLeaderboard = () => {
+      fetch(`${SUPABASE_URL}/rest/v1/scores?select=*&order=score.desc&limit=5`, {
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${SUPABASE_KEY}`
+        }
+      })
+        .then(res => res.json())
+        .then(data => {
+          const sorted = data.sort((a, b) => b.score - a.score).slice(0, 5);
+          setLeaderboard(sorted);
+          setLoadingLeaderboard(false);
+        });
+    };
+
+    fetchLeaderboard();
+    const interval = setInterval(fetchLeaderboard, 10000); // update every 10 seconds
 
     if (gameOver || !hasStarted) return;
     const id = setInterval(() => {
       setTick(t => t + 1);
     }, 800);
-    return () => clearInterval(id);
+
+    return () => {
+      clearInterval(id);
+      clearInterval(interval);
+    };
   }, [gameOver, hasStarted]);
+
+    
 
   useEffect(() => {
     if (!gameOver && hasStarted) moveDown();
@@ -306,23 +316,29 @@ ctx.shadowOffsetY = 2;
 
       <div className="mt-6 w-full max-w-xs">
         <h2 className="text-lg font-semibold mb-2">🏆 Leaderboard</h2>
-        <ul className="bg-black border border-cyan-700 rounded shadow text-cyan-300">
-          {loadingLeaderboard ? (
-            <li className="px-4 py-2 text-center text-cyan-400">Loading...</li>
-          ) : leaderboard.length === 0 ? (
-            <li className="px-4 py-2 text-center">No scores yet</li>
-          ) : (
-            leaderboard.map((entry, index) => (
-              <li
-                key={index}
-                className="flex flex-col sm:flex-row sm:justify-between px-4 py-2 border-b last:border-b-0"
-              >
-                <span>{entry.name} - {entry.score}</span>
-                <span className="text-xs text-gray-400">{new Date(entry.created_at).toLocaleString()}</span>
-              </li>
-            ))
-          )}
-        </ul>
+        <ul className="bg-slate-800 border border-cyan-500 rounded-xl shadow-md text-cyan-200 divide-y divide-cyan-600 overflow-hidden">
+  {loadingLeaderboard ? (
+    <li className="px-4 py-3 text-center text-cyan-400">Loading...</li>
+  ) : leaderboard.length === 0 ? (
+    <li className="px-4 py-3 text-center">No scores yet</li>
+  ) : (
+    leaderboard.map((entry, index) => (
+      <li
+        key={index}
+        className="flex justify-between items-center px-4 py-3 hover:bg-cyan-700/10 transition-all"
+      >
+        <div className="flex gap-2 items-center">
+          <span className="font-bold text-lg text-cyan-300">#{index + 1}</span>
+          <span className="text-base font-medium">{entry.name}</span>
+        </div>
+        <div className="text-right">
+          <p className="text-sm font-semibold">{entry.score} pts</p>
+          <p className="text-xs text-gray-400">{new Date(entry.created_at).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+        </div>
+      </li>
+    ))
+  )}
+</ul>
       </div>
     </div>
   );
